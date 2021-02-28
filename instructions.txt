@@ -1,0 +1,11 @@
+Input:
+    1) Copy/Paste Java code into the input text box.
+    2) Click the "Open File" button to import a .java file into the input text box.
+
+Translate:
+    1) Click the "Translate" button to convert your Java code into Python code.
+
+Output:
+    1) Copy the Python code from the output text box to paste elsewhere.
+    2) Click the "Download as .py" button to save the translated Python code as a Python
+         file on your local machine.
