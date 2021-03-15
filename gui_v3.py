@@ -2,6 +2,8 @@
 import tkinter as tk
 from PIL import ImageTk, Image
 from tkinter import scrolledtext, filedialog, messagebox
+from Parser import main as ParseMain
+from Scanner import *
 
 # constants
 FONT_FAMILY = "Cordana"
@@ -20,6 +22,8 @@ class App(tk.Tk):
         self.geometry('1675x1010+0+0')
         self.resizable(False, False)
         self.configure(bg=BACKGROUND_COLOR)
+
+        self.file_input = None
 
         # set min sizes for all columns
         for column in range(11):
@@ -163,13 +167,21 @@ class App(tk.Tk):
             self.input_text_box.delete("1.0", tk.END)
             self.input_text_box.insert("1.0", file_2.read())
             file_2.close()
+####################################################################
+            self.file_input = file_1
 
     def translate_file(self):
         if self.input_text_box.compare("end-1c", "==", "1.0"):
             messagebox.showerror('Error', 'Input box is empty')
             return
         self.output_text_box.delete("1.0", tk.END)
-        self.output_text_box.insert("1.0", "Translation not yet implemented...")
+####################################################################
+        test = Scanner()
+        test.prepFile(self.file_input)
+        output = ParseMain(test.progNodes)
+        # print(output.toString())
+####################################################################
+        self.output_text_box.insert("1.0", output.toString())
 
     def download_file(self):
         if self.output_text_box.compare("end-1c", "==", "1.0"):
