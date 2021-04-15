@@ -4,6 +4,9 @@ from PIL import ImageTk, Image
 from tkinter import scrolledtext, filedialog, messagebox
 from Parser import main as ParseMain
 from Scanner import *
+from Parser import getNode
+from translator import *
+import os
 
 # constants
 FONT_FAMILY = "Cordana"
@@ -24,6 +27,8 @@ class App(tk.Tk):
         self.configure(bg=BACKGROUND_COLOR)
 
         self.file_input = None
+        self.parseFile = None
+        self.transFile = None
 
         # set min sizes for all columns
         for column in range(11):
@@ -168,20 +173,32 @@ class App(tk.Tk):
             self.input_text_box.insert("1.0", file_2.read())
             file_2.close()
 ####################################################################
-            self.file_input = file_1
 
     def translate_file(self):
+        self.file_input = None
+        self.parseFile = None
+        self.transFile = None
+
         if self.input_text_box.compare("end-1c", "==", "1.0"):
             messagebox.showerror('Error', 'Input box is empty')
             return
         self.output_text_box.delete("1.0", tk.END)
+
+        with open('java_input.java', 'w') as file:
+            file.write(self.input_text_box.get("1.0", tk.END))
+            self.file_input = file.name
+
 ####################################################################
-        test = Scanner()
-        test.prepFile(self.file_input)
-        output = ParseMain(test.progNodes)
-        # print(output.toString())
+        # self.parseFile = getNode(self.file_input)
+        # self.transFile = Translator(self.parseFile)
+        # self.transFile.readTree()
+        self.parseFile = getNode(self.file_input)
+        self.transFile = Translator(self.parseFile)
+        self.transFile.readTree()
+        with open('output_file.txt', 'r') as file:
+            file_data = file.read()
 ####################################################################
-        self.output_text_box.insert("1.0", output.toString())
+        self.output_text_box.insert("1.0", file_data)
 
     def download_file(self):
         if self.output_text_box.compare("end-1c", "==", "1.0"):

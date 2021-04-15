@@ -57,7 +57,9 @@ class Node:
 
     def tokenizeLine(self):
         # self.nextBlock = None
-        if '\"' in self.line:
+        if 'System.out.print' in self.line:
+            self.print_split(self.line)
+        elif '\"' in self.line:
             self.string_split(self.line)
         else:
             tklist = self.line.split()
@@ -99,6 +101,40 @@ class Node:
         for t in line2:
             temptk = Token(t)
             self.tokens.append(temptk)
+
+    def print_split(self, strn):
+        start = 0
+        index = strn.find('System.out.println', start)
+        length = len('System.out.println')
+        print(index)
+        strToken = []
+        line1 = strn
+        line2 = ""
+        if index == -1:
+            index = strn.find('System.out.print', start)
+            length = len('System.out.print')
+            print(index, "AAAA")
+        if index != -1:
+            start = index
+            line1 = strn[0:start-1]
+            line2 = strn[index+length:]
+
+        # line1 = line1.split()
+        # line2 = line2.split()
+
+        if len(line1) > 0:
+            print(line1)
+            self.line = line1
+            self.tokenizeLine()
+
+        temptk = Token("print", "print")
+        self.tokens.append(temptk)
+
+        if len(line2) > 0:
+            print(line2)
+            self.line = line2
+            self.tokenizeLine()
+
 
     def toString(self):
         ret = ""

@@ -2,20 +2,21 @@ from Node import *
 
 from Scanner import *
 
+
 class Item:
     def __init__(self, children, data):
         self.children = []
         self.data = data
 
     # toString used for outputting tree
-    def toString(self, level = 0):
+    def toString(self, level=0):
         # print node data indented based on level in tree
-        ret = "\t"*level+"└-"+repr(self.data)+"\n"
+        ret = "\t" * level + "└-" + repr(self.data) + "\n"
         if self.children is not None:
             for child in self.children:
                 if child is not None:
                     # call toString in children in next level
-                    ret += child.toString((level+1))
+                    ret += child.toString((level + 1))
         return ret
 
 
@@ -44,7 +45,7 @@ def setCurrentLine(v):
 def setCurrentToken(v):
     global currentToken
     currentToken = v
-    #print("TOKEN = ", v)
+    # print("TOKEN = ", v)
 
 
 def nextLine():
@@ -136,7 +137,7 @@ def onlyOne(fun):
     return item
 
 
-def anyNumber(fun):
+def anyNumberComma(fun):
     item = Item([], "")
 
     saveToken = currentToken
@@ -151,6 +152,24 @@ def anyNumber(fun):
         item.children.append(temp)
         if literal(",") is not None:
             nextTokenAnyLine()
+        temp = fun()
+    return item
+
+
+def anyNumberPlus(fun):
+    item = Item([], "")
+
+    saveToken = currentToken
+    saveLine = currentLine
+    temp = fun()
+    if temp is None:
+        item.children.append(None)
+        setCurrentToken(saveToken)
+        setCurrentLine(saveLine)
+        return item
+    while temp is not None:
+        item.children.append(temp)
+        literal("+")
         temp = fun()
     return item
 
@@ -200,11 +219,11 @@ def compilation_unit():
     packstate.data = "package_statement"
     item.children.append(packstate)
 
-    impstate = anyNumber(import_statement)
+    impstate = anyNumberComma(import_statement)
     impstate.data = "import_statement"
     item.children.append(impstate)
 
-    typedec = anyNumber(type_declaration)
+    typedec = anyNumberComma(type_declaration)
     typedec.data = "type_declaration"
     item.children.append(typedec)
 
@@ -220,7 +239,8 @@ def package_statement():
     name = onlyOne(package_name)
     if name is None:
         return None
-    name.data = "package_name"
+    name = name.children[0]
+    # name.data = "package_name"
     item.children.append(name)
 
     if literal(";") is None:
@@ -238,16 +258,16 @@ def import_statement():
     name = oneOf({package_name, class_name, interface_name})
     if name is None:
         return None
-    if name.children[0].data == "package_name":
-        name.data = "package_name"
+    name = name.children[0]
+    if name.data == "package_name":
         if literal(".") is None:
             return None
         if literal("*") is None:
             return None
-    elif name.children[0].data == "class_name":
-        name.data = "class_name"
-    else:
-        name.data = "interface_name"
+    # elif name.children[0].data == "class_name":
+    #     name.data = "class_name"
+    # else:
+    #     name.data = "interface_name"
     item.children.append(name)
 
     if literal(";") is None:
@@ -260,16 +280,19 @@ def type_declaration():
     item = Item([], "type_declaration")
 
     comm = oneOrZero(doc_comment)
-    comm.data = "doc_comment"
+    comm.data = "comment"
+    if comm.children[0] is not None:
+        comm = comm.children[0]
     item.children.append(comm)
 
     decl = oneOf({class_declaration, interface_declaration})
     if decl is None:
         return None
-    if decl.children[0].data == "interface_declaration":
-        decl.data = "interface_declaration"
-    else:
-        decl.data = "class_declaration"
+    decl = decl.children[0]
+    # if decl.children[0].data == "interface_declaration":
+    #     decl.data = "interface_declaration"
+    # else:
+    #     decl.data = "class_declaration"
     item.children.append(decl)
 
     if literal(";") is None:
@@ -297,7 +320,7 @@ def doc_comment():
             else:
                 if nextLine() is not None:
                     item.children.append(Item([], "\n"))
-                    setCurrentLine(currentLine+1)
+                    setCurrentLine(currentLine + 1)
                     setCurrentToken(0)
                 else:
                     return None
@@ -308,8 +331,8 @@ def doc_comment():
 def class_declaration():
     item = Item([], "class_declaration")
 
-    modif = anyNumber(modifier)
-    modif.data = "modifiers"
+    modif = anyNumberComma(modifier)
+    modif.data = "modifier"
     item.children.append(modif)
 
     if literal("class") is None:
@@ -332,7 +355,7 @@ def class_declaration():
     if literal("{") is None:
         return None
 
-    contents = anyNumber(field_declaration)
+    contents = anyNumberComma(field_declaration)
     contents.data = "contents"
     item.children.append(contents)
 
@@ -345,7 +368,7 @@ def class_declaration():
 def interface_declaration():
     item = Item([], "interface_declaration")
 
-    modif = anyNumber(modifier)
+    modif = anyNumberComma(modifier)
     modif.data = "modifier"
     item.children.append(modif)
 
@@ -369,7 +392,7 @@ def interface_declaration():
     if literal("{") is None:
         return None
 
-    contents = anyNumber(field_declaration)
+    contents = anyNumberComma(field_declaration)
     contents.data = "contents"
     item.children.append(contents)
 
@@ -388,7 +411,7 @@ def extends():
     clnm = onlyOne(class_name)
     if clnm is None:
         return None
-    clnm.data = "class_name"
+    clnm = clnm.children[0]
     item.children.append(clnm)
 
     return item
@@ -412,6 +435,12 @@ def implements():
 def field_declaration():
     item = Item([], "field_declaration")
 
+    comm = oneOrZero(doc_comment)
+    comm.data = "comment"
+    if comm.children[0] is not None:
+        comm = comm.children[0]
+    item.children.append(comm)
+
     fd = oneOf({declare, static_initializer})
     if fd is None:
         if literal(";") is None:
@@ -426,13 +455,10 @@ def field_declaration():
 def declare():
     item = Item([], "declaration")
 
-    comm = oneOrZero(doc_comment)
-    item.children.append(comm)
-
     decl = oneOf({method_declaration, constructor_declaration, variable_declaration})
     if decl is None:
         return None
-    decl.data = "declare"
+    decl = decl.children[0]
     item.children.append(decl)
 
     return item
@@ -441,33 +467,36 @@ def declare():
 def method_declaration():
     item = Item([], "method_declaration")
 
-    modif = anyNumber(modifier)
+    modif = anyNumberComma(modifier)
     modif.data = "modifier"
     item.children.append(modif)
 
     typ = onlyOne(type)
     if typ is None:
         return None
-    typ.data = "type"
+    typ = typ.children[0]
     item.children.append(typ)
 
     iden = oneOrZero(identifier)
     if iden is None:
         return None
-    iden.data = "identifier"
+    if iden.children[0] is not None:
+        iden = iden.children[0]
     item.children.append(iden)
 
     if literal("(") is None:
         return None
 
     plist = oneOrZero(parameter_list)
-    plist.data = "parameter_list"
+    plist.data = "parameter"
+    if plist.children[0] is not None:
+        plist = plist.children[0]
     item.children.append(plist)
 
     if literal(")") is None:
         return None
 
-    arry = anyNumber(array_braces)
+    arry = anyNumberComma(array_braces)
     arry.data = "array_braces"
     item.children.append(arry)
 
@@ -476,6 +505,7 @@ def method_declaration():
         sblock = literal(";")
     if sblock is None:
         return None
+    sblock = sblock.children[0]
     item.children.append(sblock)
 
     return item
@@ -484,7 +514,7 @@ def method_declaration():
 def constructor_declaration():
     item = Item([], "constructor_declaration")
 
-    modif = anyNumber(modifier)
+    modif = anyNumberComma(modifier)
     modif.data = "modifier"
     item.children.append(modif)
 
@@ -492,7 +522,9 @@ def constructor_declaration():
         return None
 
     plist = oneOrZero(parameter_list)
-    plist.data = "parameter_list"
+    plist.data = "parameter"
+    if plist.children[0] is not None:
+        plist = plist.children[0]
     item.children.append(plist)
 
     if literal(")") is None:
@@ -501,6 +533,7 @@ def constructor_declaration():
     sblock = onlyOne(statement_block)
     if sblock is None:
         return None
+    sblock = sblock.children[0]
     item.children.append(sblock)
 
     return item
@@ -512,9 +545,9 @@ def statement_block():
     if literal("{") is None:
         return None
 
-    statements = anyNumber(statement)
-    statements.data = "statements"
-    item.children.append(statements)
+    statements = anyNumberComma(statement)
+    statements.data = "statement_block"
+    item = statements
 
     if literal("}") is None:
         return None
@@ -525,20 +558,21 @@ def statement_block():
 def variable_declaration():
     item = Item([], "variable_declaration")
 
-    modif = anyNumber(modifier)
+    modif = anyNumberComma(modifier)
     modif.data = "modifier"
     item.children.append(modif)
 
     typ = onlyOne(type)
     if typ is None:
         return None
-    typ.data = "type"
+    typ = typ.children[0]
     item.children.append(typ)
 
     vardec = oneOrMany(variable_declarator)
     if vardec is None:
         return None
-    vardec.data = "variable_declarator"
+    vardec.data = "variable_declarators"
+    item.children.append(vardec)
 
     if literal(";") is None:
         return None
@@ -552,21 +586,22 @@ def variable_declarator():
     idn = onlyOne(identifier)
     if idn is None:
         return None
-    idn.data = "identifier"
+    idn = idn.children[0]
     item.children.append(idn)
 
-    arry = anyNumber(array_braces)
+    arry = anyNumberComma(array_braces)
     arry.data = "array_braces"
     item.children.append(arry)
 
-    if literal("=") is None:
-        return item
-
-    init = onlyOne(variable_initializer)
-    if init is None:
-        return None
-    init.data = "variable_initializer"
-    item.children.append(init)
+    if literal("=") is not None:
+        init = onlyOne(variable_initializer)
+        if init is None:
+            return None
+        init = init.children[0]
+        item.children.append(init)
+    else:
+        init = Item([], "variable_initializer")
+        item.children.append(init)
 
     return item
 
@@ -578,7 +613,7 @@ def array_braces():
         return None
     if literal("]") is None:
         return None
-    item.children.append(Item([], "[]"))
+    item = Item([], "[]")
 
     return item
 
@@ -588,15 +623,15 @@ def variable_initializer():
 
     expr = onlyOne(expression)
     if expr is not None:
-        expr.data = "expression"
+        expr = expr.children[0]
         item.children.append(expr)
         return item
 
     if literal("{") is None:
         return None
 
-    vinit = anyNumber(variable_initializer)
-    vinit.data = "variable_initializer"
+    vinit = anyNumberComma(variable_initializer)
+    vinit.data = "array"
     item.children.append(vinit)
 
     if literal("}") is None:
@@ -608,13 +643,15 @@ def variable_initializer():
 def static_initializer():
     item = Item([], "static_initializer")
 
-    if literal("static") is None:
+    l = literal("static")
+    if l is None:
         return None
+    item.children.append(l)
 
     sblock = onlyOne(statement_block)
     if sblock is None:
         return None
-    sblock.data = "statement_block"
+    sblock = sblock.children[0]
     item.children.append(sblock)
 
     return item
@@ -638,16 +675,17 @@ def parameter():
     typ = onlyOne(type)
     if typ is None:
         return None
-    typ.data = "type"
+    typ = typ.children[0]
     item.children.append(typ)
 
     iden = onlyOne(identifier)
     if iden is None:
         return None
-    iden.data = "identifier"
+    iden = iden.children[0]
     item.children.append(iden)
 
-    arry = anyNumber(array_braces)
+    arry = anyNumberComma(array_braces)
+    arry.data = "array_braces"
     item.children.append(arry)
 
     return item
@@ -657,114 +695,127 @@ def statement():
     item = Item([], "statement")
 
     comm = oneOrZero(doc_comment)
-    comm.data = "doc_comment"
+    comm.data = "comment"
+    if comm.children[0] is not None:
+        comm = comm.children[0]
     item.children.append(comm)
 
     vardec = onlyOne(variable_declaration)
     if vardec is not None:
-        vardec.data = "variable_declaration"
+        vardec = vardec.children[0]
         item.children.append(vardec)
-        return item
-
-    expr = onlyOne(expression)
-    if expr is not None:
-        expr.data = "expression"
-        item.children.append(expr)
-        if literal(";") is None:
-            return None
         return item
 
     sblock = onlyOne(statement_block)
     if sblock is not None:
-        sblock.data = "statement_block"
+        sblock = sblock.children[0]
         item.children.append(sblock)
         return item
 
     ifst = onlyOne(if_statement)
     if ifst is not None:
-        ifst.data = "if_statement"
+        ifst = ifst.children[0]
         item.children.append(ifst)
         return item
 
     dost = onlyOne(do_statement)
     if dost is not None:
-        dost.data = "do_statement"
+        dost = dost.children[0]
         item.children.append(dost)
         return item
 
     whilest = onlyOne(while_statement)
     if whilest is not None:
-        whilest.data = "while_statement"
+        whilest = whilest.children[0]
         item.children.append(whilest)
         return item
 
     forst = onlyOne(for_statement)
     if forst is not None:
-        forst.data = "for_statement"
+        forst = forst.children[0]
         item.children.append(forst)
         return item
 
     tryst = onlyOne(try_statement)
     if tryst is not None:
-        tryst.data = "try_statement"
+        tryst = tryst.children[0]
         item.children.append(tryst)
         return item
 
     swtst = onlyOne(switch_statement)
     if swtst is not None:
-        swtst.data = "switch_statement"
+        swtst = swtst.children[0]
         item.children.append(swtst)
         return item
 
     rtrn = literal("return")
     if rtrn is not None:
+        item.children.append(rtrn)
         expr = oneOrZero(expression)
-        rtrn.children.append(expr)
+        if expr.children[0] is not None:
+            expr = expr.children[0]
+        item.children.append(expr)
         if literal(";") is None:
             return None
-        item.children.append(rtrn)
+        # item.children.append(rtrn)
         return item
 
     thrw = literal("throw")
     if thrw is not None:
+        item.children.append(thrw)
         expr = onlyOne(expression)
         if expr is None:
             return None
-        thrw.children.append(expr)
+        expr = expr.children[0]
+        item.children.append(expr)
         if literal(";") is None:
             return None
-        item.children.append(thrw)
+        # item.children.append(thrw)
+        return item
+
+    expr = onlyOne(expression)
+    if expr is not None:
+        expr = expr.children[0]
+        item.children.append(expr)
+        if literal(";") is None:
+            return None
         return item
 
     iden = onlyOne(identifier)
     if iden is not None:
-        iden.data = "identifier"
-        item.children.append(whilest)
+        iden = iden.children[0]
+        item.children.append(iden)
         if literal(":") is None:
             return None
         st = onlyOne(statement)
         if st is None:
             return None
-        st.data = "statement"
+        st = st.children[0]
         item.children.append(st)
         return item
 
     brk = literal("break")
     if brk is not None:
+        item.children.append(brk)
         iden = oneOrZero(identifier)
-        brk.children.append(iden)
+        if iden.children[0] is not None:
+            iden = iden.children[0]
+        item.children.append(iden)
         if literal(";") is None:
             return None
-        item.children.append(brk)
+        # item.children.append(brk)
         return item
 
     cnt = literal("continue")
     if cnt is not None:
+        item.children.append(cnt)
         iden = oneOrZero(identifier)
-        cnt.children.append(iden)
+        if iden.children[0] is not None:
+            iden = iden.children[0]
+        item.children.append(iden)
         if literal(";") is None:
             return None
-        item.children.append(cnt)
+        # item.children.append(cnt)
         return item
 
     if literal(";") is not None:
@@ -784,7 +835,7 @@ def if_statement():
     exp = onlyOne(expression)
     if exp is None:
         return None
-    exp.data = "expression"
+    exp = exp.children[0]
     item.children.append(exp)
 
     if literal(")") is None:
@@ -793,17 +844,17 @@ def if_statement():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     if literal("else") is None:
-        item.children.append(Item([], "statement"))
+        item.children.append(Item([None], "statement"))
         return item
 
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     return item
@@ -818,7 +869,7 @@ def do_statement():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     if literal("while") is None:
@@ -829,7 +880,7 @@ def do_statement():
     exp = onlyOne(expression)
     if exp is None:
         return None
-    exp.data = "expression"
+    exp = exp.children[0]
     item.children.append(exp)
 
     if literal(")") is None:
@@ -851,7 +902,7 @@ def while_statement():
     exp = onlyOne(expression)
     if exp is None:
         return None
-    exp.data = "expression"
+    exp = exp.children[0]
     item.children.append(exp)
 
     if literal(")") is None:
@@ -860,7 +911,7 @@ def while_statement():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     return item
@@ -876,23 +927,29 @@ def for_statement():
 
     vardec = onlyOne(variable_declaration)
     if vardec is not None:
-        vardec.data = "variable_declaration"
+        vardec = vardec.children[0]
         item.children.append(vardec)
     else:
         exp = oneOrZero(expression)
         exp.data = "expression"
+        if exp.children[0] is not None:
+            exp = exp.children[0]
         item.children.append(exp)
         if literal(";") is None:
             return None
 
     exp = oneOrZero(expression)
     exp.data = "expression"
+    if exp.children[0] is not None:
+        exp = exp.children[0]
     item.children.append(exp)
     if literal(";") is None:
         return None
 
     exp = oneOrZero(expression)
     exp.data = "expression"
+    if exp.children[0] is not None:
+        exp = exp.children[0]
     item.children.append(exp)
     if literal(";") is None:
         return None
@@ -903,7 +960,7 @@ def for_statement():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     return item
@@ -918,21 +975,21 @@ def try_statement():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
-    ct = anyNumber(catch)
+    ct = anyNumberComma(catch)
     ct.data = "catch"
     item.children.append(ct)
 
     if literal("finally") is None:
-        item.children.append(Item([], "statement"))
+        item.children.append(Item([None], "statement"))
         return item
 
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     return item
@@ -949,7 +1006,7 @@ def catch():
     para = onlyOne(parameter)
     if para is None:
         return None
-    para.data = "parameter"
+    para = para.children[0]
     item.children.append(para)
 
     if literal(")") is None:
@@ -958,7 +1015,7 @@ def catch():
     st = onlyOne(statement)
     if st is None:
         return None
-    st.data = "statement"
+    st = st.children[0]
     item.children.append(st)
 
     return item
@@ -975,7 +1032,7 @@ def switch_statement():
     exp = onlyOne(expression)
     if exp is None:
         return None
-    exp.data = "expression"
+    exp = exp.children[0]
     item.children.append(exp)
 
     if literal(")") is None:
@@ -983,7 +1040,7 @@ def switch_statement():
     if literal("{") is None:
         return None
 
-    cases = anyNumber(switch_case)
+    cases = anyNumberComma(switch_case)
     cases.data = "cases"
     item.children.append(cases)
 
@@ -1000,20 +1057,42 @@ def switch_case():
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp = exp.children[0]
         item.children.append(exp)
-    else:
+    elif literal("default") is not None:
         item.children.append(Item([], "default"))
 
-    st = anyNumber(statement)
-    st.data = "statement"
+    st = onlyOne(statement)
+    if st is None:
+        return None
+    st = st.children[0]
     item.children.append(st)
 
     return item
 
 
 def expression():
-    item = Item([], "expression")
+    item2 = Item([], "expression")
+    item = Item([], "")
+
+    item2.children.append(item)
+
+    if peekToken().id == "print":
+        tempToken = currentToken
+        item.data = "print"
+        nextToken()
+        l = literal("(")
+        if l is None:
+            setCurrentToken(tempToken)
+            return None
+        print(peekToken().word, peekToken().id)
+        exp = anyNumberPlus(expressionPrint)
+        item.children = exp.children
+        l = literal(")")
+        if l is None:
+            setCurrentToken(tempToken)
+            return None
+        return item2
 
     # next = nextToken()
     # setCurrentToken(currentToken - 1)
@@ -1027,18 +1106,19 @@ def expression():
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "numeric_expression"
             item.children.append(l)
             exp = onlyOne(expression)
             if exp is None:
                 return None
-            exp.data = "expression"
+            exp = exp.children[0]
             item.children.append(exp)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
     #
     # testex = onlyOne(testing_expression)
     # if testex is not None:
@@ -1055,38 +1135,41 @@ def expression():
     #     return item
     l = literal("!")
     if l is not None:
+        item.data = "logical_expression"
         item.children.append(l)
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp = exp.children[0]
         item.children.append(exp)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
 
     l = literal("true")
     if l is not None:
+        item.data = "logical_expression"
         item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
 
     l = literal("false")
     if l is not None:
+        item.data = "logical_expression"
         item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # strex = onlyOne(string_expression)
     # if strex is not None:
@@ -1101,18 +1184,19 @@ def expression():
     #     return item
     l = literal("~")
     if l is not None:
+        item.data = "bit_expression"
         item.children.append(l)
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp = exp.children[0]
         item.children.append(exp)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # castex = onlyOne(casting_expression)
     # if castex is not None:
@@ -1122,10 +1206,11 @@ def expression():
 
     l = literal("(")
     if l is not None:
+        item.data = "casting_expression"
         typ = onlyOne(type)
         if typ is None:
             return None
-        typ.data = "type"
+        typ = typ.children[0]
         item.children.append(typ)
 
         if literal(")") is None:
@@ -1134,15 +1219,15 @@ def expression():
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp = exp.children[0]
         item.children.append(exp)
 
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # createex = onlyOne(creating_expression)
     # if createex is not None:
@@ -1151,13 +1236,13 @@ def expression():
     #     return item
     crex = onlyOne(creating_expression)
     if crex is not None:
-        item.children.append(crex)
+        item = crex.children[0]
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # litex = onlyOne(literal_expression)
     # if litex is not None:
@@ -1166,13 +1251,13 @@ def expression():
     #     return item
     litex = onlyOne(literal_expression)
     if litex is not None:
-        item.children.append(litex)
+        item2.children[0] = item = litex.children[0]
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # null = literal("null")
     # if null is not None:
@@ -1180,13 +1265,14 @@ def expression():
     #     return item
     l = literal("null")
     if l is not None:
+        item.data = "keyword_expression"
         item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # spr = literal("super")
     # if spr is not None:
@@ -1194,13 +1280,14 @@ def expression():
     #     return item
     l = literal("super")
     if l is not None:
+        item.data = "keyword_expression"
         item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # ths = literal("this")
     # if ths is not None:
@@ -1208,13 +1295,14 @@ def expression():
     #     return item
     l = literal("this")
     if l is not None:
+        item.data = "keyword_expression"
         item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     # iden = onlyOne(identifier)
     # if iden is not None:
@@ -1223,29 +1311,35 @@ def expression():
     #     return item
     iden = onlyOne(identifier)
     if iden is not None:
-        iden.data = "identifier"
+        item.data = "identifier_expression"
+        iden = iden.children[0]
         item.children.append(iden)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
-    if literal("(") is not None:
+    l = literal("(")
+    if l is not None:
+        item.data = "parenthesis_expression"
+        item.children.append(l)
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp = exp.children[0]
         item.children.append(exp)
-        if literal(")") is None:
+        l = literal(")")
+        if l is None:
             return None
+        item.children.append(l)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     #
     #
     # exp = onlyOne(expression)
@@ -1297,80 +1391,86 @@ def expression():
 
 
 def expression_prime():
-    item = Item([], "expression")
+    item2 = Item([], "expression")
+    item = Item([], "")
+
+    item2.children.append(item)
 
     symbols = {"++", "--"}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "numeric_expression"
             item.children.append(l)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
     symbols = {"+", "+=", "-", "-=", "*", "*=", "/", "/=", "%", "%="}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "numeric_expression"
             item.children.append(l)
             exp = onlyOne(expression)
             if exp is None:
                 return None
-            exp.data = "expression"
+            exp = exp.children[0]
             item.children.append(exp)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
-
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
     symbols = {">", "<", ">=", "<=", "==", "!="}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "testing_expression"
             item.children.append(l)
             exp = onlyOne(expression)
             if exp is None:
                 return None
-            exp.data = "expression"
+            exp = exp.children[0]
             item.children.append(exp)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
-
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
     symbols = {"&", "&=", "|", "|=", "^", "^=", "&&", "||=", "%", "%="}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "logical_expression"
             item.children.append(l)
             exptwo = onlyOne(expression)
             if exptwo is None:
                 return None
-            exptwo.data = "expression"
+            exptwo = exptwo.children[0]
             item.children.append(exptwo)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
     l = literal("?")
     if l is not None:
+        item.data = "logical_expression"
         item.children.append(l)
         exptwo = onlyOne(expression)
         if exptwo is None:
             return None
-        exptwo.data = "expression"
+        exptwo = exptwo.children[0]
         item.children.append(exptwo)
         ltwo = literal(":")
         if ltwo is not None:
@@ -1378,117 +1478,125 @@ def expression_prime():
             expthree = onlyOne(expression)
             if expthree is None:
                 return None
-            expthree.data = "expression"
+            expthree = expthree.children[0]
             item.children.append(expthree)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
-    symbols = {"+", "+="}
-    for symbol in symbols:
-        l = literal(symbol)
-        if l is not None:
-            item.children.append(l)
-            exptwo = onlyOne(expression)
-            if exptwo is None:
-                return None
-            exptwo.data = "expression"
-            item.children.append(exptwo)
-            expp = onlyOne(expression_prime)
-            if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
-
+    # symbols = {"+", "+="}
+    # for symbol in symbols:
+    #     l = literal(symbol)
+    #     if l is not None:
+    #         item.data = "string_expression"
+    #         item.children.append(l)
+    #         exptwo = onlyOne(expression)
+    #         if exptwo is None:
+    #             return None
+    #         exptwo = exptwo.children[0]
+    #         item.children.append(exptwo)
+    #         expp = onlyOne(expression_prime)
+    #         if expp is None:
+    #             return item
+    #         expp = expp.children[0]
+    #         item.children.extend(expp.children)
+    #         return item
 
     symbols = {">>=", "<<", ">>", ">>>"}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
+            item.data = "bit_expression"
             item.children.append(l)
             exptwo = onlyOne(expression)
             if exptwo is None:
                 return None
-            exptwo.data = "expression"
+            exptwo = exptwo.children[0]
             item.children.append(exptwo)
             expp = onlyOne(expression_prime)
             if expp is None:
-                return item
-            expp.data = "expression_p"
-            item.children.append(expp)
-            return item
-
+                return item2
+            expp = expp.children[0]
+            expp.children[0].children.insert(0, item2)
+            return expp
 
     if literal("(") is not None:
+        item.data = "method_expression"
         alist = oneOrZero(arglist)
         alist.data = "arglist"
+        if alist.children[0] is not None:
+            alist = alist.children[0]
         item.children.append(alist)
         if literal(")") is None:
             return None
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     elif literal("[") is not None:
-        item.children.append(Item([], "[]"))
+        item.data = "brackets_expression"
+        item.children.append(Item([], "["))
         exptwo = onlyOne(expression)
         if exptwo is None:
             return None
-        exptwo.data = "expression"
+        exptwo = exptwo.children[0]
         item.children.append(exptwo)
         if literal("]") is None:
             return None
+        item.children.append(Item([], "]"))
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     elif literal(".") is not None:
+        item.data = "dot_expression"
         item.children.append(Item([], "."))
         exptwo = onlyOne(expression)
         if exptwo is None:
             return None
-        exptwo.data = "expression"
+        exptwo = exptwo.children[0]
         item.children.append(exptwo)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     elif literal(",") is not None:
+        item.data = "comma_expression"
         item.children.append(Item([], ","))
         exptwo = onlyOne(expression)
         if exptwo is None:
             return None
-        exptwo.data = "expression"
+        exptwo = exptwo.children[0]
         item.children.append(exptwo)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
     elif literal("instanceof") is not None:
+        item.data = "instance_expression"
         item.children.append(Item([], "isntanceof"))
         name = oneOf({class_name, interface_name})
         if name is None:
             return None
-        name.data = "name"
+        name = name.children[0]
         item.children.append(name)
         expp = onlyOne(expression_prime)
         if expp is None:
-            return item
-        expp.data = "expression_p"
-        item.children.append(expp)
-        return item
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
 
     return None
 
@@ -1650,12 +1758,14 @@ def creating_expression():
 
     name = onlyOne(class_name)
     if name is not None:
-        name.data = "class_name"
+        name = name.children[0]
         item.children.append(name)
         if literal("(") is None:
             return None
         alist = oneOrZero(arglist)
         alist.data = "arglist"
+        if alist.children[0] is not None:
+            alist = alist.children[0]
         item.children.append(alist)
         if literal(")") is None:
             return None
@@ -1663,17 +1773,20 @@ def creating_expression():
 
     typ = onlyOne(type_specifier)
     if typ is not None:
-        typ.data = "type_specifier"
+        typ = typ.children[0]
         item.children.append(typ)
         if literal("[") is not None:
             exp = oneOrZero(expression)
-            exp.data = "expression"
-            item.children.append(exp)
-            if exp.children[0] is None:
+            if exp.children[0] is not None:
+                exp = exp.children[0]
+                item.children.append(exp)
+            else:
+                item.children.append(Item([], "expression"))
                 setCurrentToken(currentToken - 1)
                 arry = oneOrMany(array_braces)
                 if arry is None:
                     return None
+
                 arry.data = "array_braces"
                 item.children.append(arry)
                 return item
@@ -1685,7 +1798,7 @@ def creating_expression():
         exp = onlyOne(expression)
         if exp is None:
             return None
-        exp.data = "expression"
+        exp.data = "parenthesis_expression"
         item.children.append(exp)
         if literal(")") is None:
             return None
@@ -1706,6 +1819,148 @@ def literal_expression():
     return item
 
 
+def expressionPrint():
+    item2 = Item([], "expression")
+    item = Item([], "")
+
+    item2.children.append(item)
+
+    if peekToken().id == "print":
+        tempToken = currentToken
+        item.data = "print"
+        nextToken()
+        l = literal("(")
+        if l is None:
+            setCurrentToken(tempToken)
+            return None
+        print(peekToken().word, peekToken().id)
+        exp = anyNumberPlus(expressionPrint)
+        item.children = exp.children
+        l = literal(")")
+        if l is None:
+            setCurrentToken(tempToken)
+            return None
+        return item2
+
+    symbols = {"-", "++", "--"}
+    for symbol in symbols:
+        l = literal(symbol)
+        if l is not None:
+            item.data = "numeric_expression"
+            item.children.append(l)
+            exp = onlyOne(expression)
+            if exp is None:
+                return None
+            exp = exp.children[0]
+            item.children.append(exp)
+            return item2
+
+    l = literal("!")
+    if l is not None:
+        item.data = "logical_expression"
+        item.children.append(l)
+        exp = onlyOne(expression)
+        if exp is None:
+            return None
+        exp = exp.children[0]
+        item.children.append(exp)
+        return item2
+
+    l = literal("true")
+    if l is not None:
+        item.data = "logical_expression"
+        item.children.append(l)
+        return item2
+
+    l = literal("false")
+    if l is not None:
+        item.data = "logical_expression"
+        item.children.append(l)
+        return item2
+
+    l = literal("~")
+    if l is not None:
+        item.data = "bit_expression"
+        item.children.append(l)
+        exp = onlyOne(expression)
+        if exp is None:
+            return None
+        exp = exp.children[0]
+        item.children.append(exp)
+        return item2
+
+    l = literal("(")
+    if l is not None:
+        item.data = "casting_expression"
+        typ = onlyOne(type)
+        if typ is None:
+            return None
+        typ = typ.children[0]
+        item.children.append(typ)
+
+        if literal(")") is None:
+            return None
+
+        exp = onlyOne(expression)
+        if exp is None:
+            return None
+        exp = exp.children[0]
+        item.children.append(exp)
+
+        return item2
+
+    crex = onlyOne(creating_expression)
+    if crex is not None:
+        item = crex.children[0]
+        return item2
+
+    litex = onlyOne(literal_expression)
+    if litex is not None:
+        item2.children[0] = item = litex.children[0]
+        return item2
+
+    l = literal("null")
+    if l is not None:
+        item.data = "keyword_expression"
+        item.children.append(l)
+        return item2
+
+    l = literal("super")
+    if l is not None:
+        item.data = "keyword_expression"
+        item.children.append(l)
+        return item2
+
+    l = literal("this")
+    if l is not None:
+        item.data = "keyword_expression"
+        item.children.append(l)
+        return item2
+
+    iden = onlyOne(identifier)
+    if iden is not None:
+        item.data = "identifier_expression"
+        iden = iden.children[0]
+        item.children.append(iden)
+        return item2
+
+    l = literal("(")
+    if l is not None:
+        item.data = "parenthesis_expression"
+        item.children.append(l)
+        exp = onlyOne(expression)
+        if exp is None:
+            return None
+        exp = exp.children[0]
+        item.children.append(exp)
+        l = literal(")")
+        if l is None:
+            return None
+        item.children.append(l)
+        return item2
+    return None
+
+
 def arglist():
     item = Item([], "arglist")
 
@@ -1713,7 +1968,7 @@ def arglist():
     if alist is None:
         return None
     alist.data = "arglist"
-    item.children.append(alist)
+    item = alist
 
     return item
 
@@ -1724,10 +1979,10 @@ def type():
     typsp = onlyOne(type_specifier)
     if typsp is None:
         return None
-    typsp.data = "type_specifier"
+    typsp = typsp.children[0]
     item.children.append(typsp)
 
-    arry = anyNumber(array_braces)
+    arry = anyNumberComma(array_braces)
     arry.data = "array_braces"
     item.children.append(arry)
 
@@ -1746,13 +2001,13 @@ def type_specifier():
 
     clnm = onlyOne(class_name)
     if clnm is not None:
-        clnm.data = "class_name"
+        clnm = clnm.children[0]
         item.children.append(clnm)
         return item
 
     innm = onlyOne(interface_name)
     if innm is not None:
-        innm.data = "interface_name"
+        innm = innm.children[0]
         item.children.append(innm)
         return item
 
@@ -1762,7 +2017,8 @@ def type_specifier():
 def modifier():
     item = Item([], "modifier")
 
-    symbols = { "public", "private", "protected", "static", "final", "native", "synchronized", "abstract", "threadsafe", "transient"}
+    symbols = {"public", "private", "protected", "static", "final", "native", "synchronized", "abstract", "threadsafe",
+               "transient"}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
@@ -1778,7 +2034,7 @@ def package_name():
     iden = onlyOne(identifier)
     if iden is None:
         return None
-    iden.data = "identifier"
+    iden = iden.children[0]
     item.children.append(iden)
 
     l = literal(".")
@@ -1791,7 +2047,7 @@ def package_name():
             iden = onlyOne(identifier)
             if iden is None:
                 return None
-            iden.data = "identifier"
+            iden = iden.children[0]
             item.children.append(iden)
 
     return item
@@ -1811,14 +2067,17 @@ def class_name():
 
     iden = onlyOne(identifier)
     if iden is not None:
+        iden = iden.children[0]
         item.children.append(iden)
         return item
 
     pname = onlyOne(package_name)
     if pname is not None:
+        pname = pname.children[0]
         item.children.append(pname)
         iden = onlyOne(identifier)
         if iden is not None:
+            iden = iden.children[0]
             item.children.append(iden)
             return item
 
@@ -1830,14 +2089,17 @@ def interface_name():
 
     iden = onlyOne(identifier)
     if iden is not None:
+        iden = iden.children[0]
         item.children.append(iden)
         return item
 
     pname = onlyOne(package_name)
     if pname is not None:
+        pname = pname.children[0]
         item.children.append(pname)
         iden = onlyOne(identifier)
         if iden is not None:
+            iden = iden.children[0]
             item.children.append(iden)
             return item
 
@@ -1853,7 +2115,7 @@ def integer_literal():
     n = peekToken().word
     try:
         value = int(n)
-        item.children.append([], value)
+        item.children.append(Item([], value))
         nextTokenAnyLine()
         return item
     except ValueError:
@@ -1869,11 +2131,12 @@ def float_literal():
     n = peekToken().word
     try:
         value = float(n)
-        item.children.append([], value)
+        item.children.append(Item([], value))
         nextTokenAnyLine()
         return item
     except ValueError:
         return None
+
 
 #
 # def decimal_digits():
@@ -1925,9 +2188,11 @@ def identifier():
 
 
 # create a scanner object then use prepfile on required file
-#          test = Scanner()
+def getNode(data):
+    test = None
+    test = Scanner()
 
-#          test.prepFile("java.txt")
-# for n in test.progNodes:
-#     print(n.toString())
-#          main(test.progNodes)
+    test.prepFile(data)
+    # for n in test.progNodes:
+    #     print(n.toString())
+    return main(test.progNodes)
