@@ -10,16 +10,16 @@ class Translator:
     def __init__(self, tree):
         self.jTree = tree
         self.pFile = open("output_file.txt", "w")
-        self.pFile.write("Translator")
+        # self.pFile.write("Translator")
 
     # text file to output python code to
     def readTree(self):
         # reads the tree and figures out what each line is
         # sets current node to 'compilation_unit'
-        # rootNode = self.jTree
+        rootNode = self.jTree
         # outer for loop runs based on the length of children from compilation, inner loop iterates through the children of each node
         # could use recursive or non-recursive method to iterate through children outside of this method in analyeNode
-        self.analyzeNode(self.jTree, 0)
+        self.analyzeNode(rootNode, 0)
         self.pFile.close()
 
     def handleStatement(self,currentNode, indent):
@@ -40,7 +40,7 @@ class Translator:
                     for b in n.children:
                         self.pFile.write(' ' + b.data)
                     self.pFile.write('\n')'''
-                    print("Line 43", n.data)
+                    # print("Line 43", n.data)
                     self.analyzeNode(n, indent)
                 elif n.data == 'if_statement':
                     cond = 'if'
@@ -154,7 +154,7 @@ class Translator:
             if currentNode.data == 'numeric_expression' and currentNode.children is not None:
                 #self.pFile.write('(')
                 for n in r.children:
-                    if n.data in (  "+", "+=", "-", "-=",  "*",  "*=", "/", "/=", "%", "%=", "++", "--" ):
+                    if n.data in ("+", "+=", "-", "-=",  "*",  "*=", "/", "/=", "%", "%=", "++", "--"):
                         self.pFile.write(n.data)
                     else:
                         self.handleExpression(n, indent)
@@ -191,6 +191,7 @@ class Translator:
             elif currentNode.data == 'method_declaration' and currentNode.children is not None:
 
                 for n in currentNode.children:
+                   # print(n.data)
                     temp = n
                     if n.data == 'type':
                         c = n.children[0]
@@ -218,21 +219,23 @@ class Translator:
 
                     if n.data == 'statement_block':
                         for a in n.children:
-                            print("Line 221", a)
+                            # print("Line 221", a)
                             self.analyzeNode(a, indent + 1)
                 self.pFile.write('\n')
             elif currentNode.data == 'comment' and len(currentNode.children) > 0:
-
                 self.pFile.write(space + '#')
                 for n in currentNode.children:
-                     self.pFile.write(' ' + n.data)
+                    if n is None:
+                        return
+                    print(n.data)
+                    self.pFile.write(' ' + n.data)
                 self.pFile.write('\n')
             elif currentNode.data == 'statement' and currentNode.children is not None:
                 self.handleStatement(currentNode, indent)
             elif currentNode.data in ('type_declaration', 'field_declaration', 'declaration',
                                     'compilation_unit') and currentNode.children is not None:
                 for n in currentNode.children:
-                    print("Line 235", n)
+                    # print("Line 235", n)
                     self.analyzeNode(n, indent)
             elif currentNode.data == 'class_declaration' and currentNode.children is not None:
                 for n in currentNode.children:
@@ -240,7 +243,7 @@ class Translator:
                         self.pFile.write('class ' + n.children[0].data + ': \n')
                     if n.data == 'contents':
                         for a in n.children:
-                            print("Line 243", n)
+                            # print("Line 243", n)
                             self.analyzeNode(a, indent + 1)
         else:
             self.pFile.write("none")

@@ -33,7 +33,6 @@ def main(input):
     global progLines
     progLines = input
     tree = compilation_unit()
-    # print(tree.toString())
     return tree
 
 
@@ -304,26 +303,33 @@ def type_declaration():
 def doc_comment():
     item = Item([], "comment")
 
-    if literal("//") is not None:
-        setCurrentToken(currentToken - 1)
-        while nextToken() is not None:
-            item.children.append(Item([], peekToken().word))
-        setCurrentLine(currentLine + 1)
-        setCurrentToken(0)
-        return item
+    # if literal("//") is not None:
+    #     setCurrentToken(currentToken - 1)
+    #     while nextToken() is not None:
+    #         item.children.append(Item([], peekToken().word))
+    #     setCurrentLine(currentLine + 1)
+    #     setCurrentToken(0)
+    #     return item
+    #
+    # if literal("/*") is not None:
+    #     setCurrentToken(currentToken - 1)
+    #     while literal("*/") is None:
+    #         if nextToken is not None:
+    #             item.children.append(Item([], peekToken().word))
+    #         else:
+    #             if nextLine() is not None:
+    #                 item.children.append(Item([], "\n"))
+    #                 setCurrentLine(currentLine+1)
+    #                 setCurrentToken(0)
+    #             else:
+    #                 return None
 
-    if literal("/*") is not None:
-        setCurrentToken(currentToken - 1)
-        while literal("*/") is None:
-            if nextToken is not None:
-                item.children.append(Item([], peekToken().word))
-            else:
-                if nextLine() is not None:
-                    item.children.append(Item([], "\n"))
-                    setCurrentLine(currentLine + 1)
-                    setCurrentToken(0)
-                else:
-                    return None
+    while peekToken() is not None and peekToken().id == "comment":
+        item.children.append(Item([], peekToken().word))
+        nextTokenAnyLine()
+
+    if len(item.children) == 0:
+        return None
 
     return item
 
@@ -1236,7 +1242,8 @@ def expression():
     #     return item
     crex = onlyOne(creating_expression)
     if crex is not None:
-        item = crex.children[0]
+        item.data = crex.children[0].data
+        item.children = crex.children[0].children
         expp = onlyOne(expression_prime)
         if expp is None:
             return item2
@@ -1810,7 +1817,7 @@ def creating_expression():
 def literal_expression():
     item = Item([], "literal_expression")
 
-    ltrl = oneOf({integer_literal, float_literal, character, string})
+    ltrl = oneOf({number, character, string})
     if ltrl is None:
         return None
     ltrl = ltrl.children[0]
@@ -2106,49 +2113,16 @@ def interface_name():
     return None
 
 
-def integer_literal():
-    item = Item([], "integer_literal")
+def number():
+    item = Item([], "number")
 
-    if peekToken().id != "int":
+    if peekToken().id != "num":
         return None
 
     n = peekToken().word
-    try:
-        value = int(n)
-        item.children.append(Item([], value))
-        nextTokenAnyLine()
-        return item
-    except ValueError:
-        return None
-
-
-def float_literal():
-    item = Item([], "float_literal")
-
-    if peekToken().id != "float":
-        return None
-
-    n = peekToken().word
-    try:
-        value = float(n)
-        item.children.append(Item([], value))
-        nextTokenAnyLine()
-        return item
-    except ValueError:
-        return None
-
-
-#
-# def decimal_digits():
-#     return
-
-#
-# def exponent_part():
-#     return
-#
-#
-# def float_type_suffix():
-#     return
+    item.children.append(Item([], n))
+    nextTokenAnyLine()
+    return item
 
 
 def character():
@@ -2189,7 +2163,6 @@ def identifier():
 
 # create a scanner object then use prepfile on required file
 def getNode(data):
-    test = None
     test = Scanner()
 
     test.prepFile(data)

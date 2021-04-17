@@ -1,1 +1,32 @@
-Translatornone
+#  Create a Main class
+
+class Main: 
+   #    Create a fullThrottle() method
+
+   #type: void
+   def fullThrottle(self):
+      #      System.      out.println('The car is going as fast as it can! ')
+      System.      out.println('The car is going as fast as it can! ')
+
+   #    Create a speed() method and add a parameter
+
+   #type: void
+   def speed(self, maxSpeed):
+      #      System.      out.println('Max speed is: '+maxSpeed)
+      System.      out.println('Max speed is: '+maxSpeed)
+
+   #    Inside main, call the methods on the myCar object
+
+   #type: void
+   def main(self, args):
+      #      Create a myCar object
+
+myCar      #      Call the fullThrottle() method
+
+      myCar.fullThrottle()
+      myCar.fullThrottle()
+      #      Call the speed() method
+
+      myCar.speed('200')
+      myCar.speed('200')
+
