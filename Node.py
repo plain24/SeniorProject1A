@@ -1,15 +1,9 @@
 from re import split, search
 
+
 class Token:
     word = ""
     id = None
-    # ongoing list of keyword and characters needed to be recognized from java
-    # typeSpecs = ["int", "float", "double", "boolean", "String", "char"]
-    # operators = ['+', '-', '*', '/', '%']
-    # comparison = ['==', '<=', '>=', '!=', '!']
-    # tryStatements = ["try", "catch", "finally"]
-    # logic = ["true", "false"]
-    # modifiers = ["public", "static", "private", "protected", "final", "abstract", "native"]
 
     def __init__(self, word, id=None):
         self.word = word
@@ -28,21 +22,6 @@ class Node:
     splitters = ["--","++","+=","-=","*=","/=","%=",">>=",">>>","<<",">>","<=",">=","==","!=","&=","&&","||=","|=","^="]
 
     def tokenizeLine(self, inLine):
-        # self.nextBlock = None
-        # if 'System.out.print' in self.line:
-        #     self.print_split(self.line)
-        # elif '\"' in self.line:
-        #     self.string_split(self.line)
-        # else:
-        #     tklist = self.line.split()
-        #     for x in tklist:
-        #         # if tklist[0] == "//":
-        #         #     temptk = Token(" ".join(tklist[1:len(tklist)]), "comment")
-        #         #     self.tokens.append(temptk)
-        #         #     break
-        #         # else:
-        #         temptk = Token(x)
-        #         self.tokens.append(temptk)
         if "System.out.print" in inLine:
             self.print_split(inLine)
         elif "\"" in inLine:
@@ -111,9 +90,6 @@ class Node:
         if index != -1:
             start = index+1
             index = strn.find('\'', start)
-            # if index == -1 or index - start != 2:
-            #     print("ERROR")
-            #     exit
 
             line1 = strn[0:start-1]
             line2 = strn[index+1:]
@@ -133,7 +109,6 @@ class Node:
         index = num.span()[0]
         line1 = strn
         line2 = ""
-        print(line1, line2)
         if index != -1:
             start = index
             index = index + len(num.group())
@@ -141,9 +116,6 @@ class Node:
             line1 = strn[0:start]
             line2 = strn[index:]
 
-        print(line1, line2)
-
-        print()
         if len(line1) > 0:
             self.tokenizeLine(line1)
 

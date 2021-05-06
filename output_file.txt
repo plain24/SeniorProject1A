@@ -1,32 +1,103 @@
-#  Create a Main class
+# Create a NumKit class
+class NumKit: 
+      # Recursive number power method.
+      # type: int
+      def power(self, num, base):
+            if base == 0:
+                  return 1
+            else:
+                  x = self.power(num, base-1)
+
+                  return num*x
+      # type: int
+      def product(self, a, b):
+            if a > 1:
+                  return a+self.product(a, b-1)
+            if b == 0:
+                  return 0
+            else:
+                  return 1
+      # type: Boolean
+      def isPrime(self, n):
+            # Corner case
+            if n <= 1:
+                  return False
+            # Check from 2 to n-1
+            for i in range(2,n,1): 
+                  if n%i == 0:
+                        return False
+            return True
+
+      # Create a isEven method to check if number is even/odd
+      # type: String
+      def isEven(self, a):
+            temp = None
+            if a%2 == 0:
+                  temp = 'Even'
+                  return temp
+
+            else:
+                  temp = 'Odd'
+                  return temp
+
+class MathNode: 
+      data = None
+      description = None
+      next = None
+      def __init__(self, data, desc):
+            self.data = data
+            self.description = desc
+
+      # type: void
+      def setNext(self, next):
+            self.next = next
+
+      # type: void
+      def printList(self):
+            x = self
+            if self.next != None:
+                  x = self.next
+            print('\nYour Math Nodes: \n')
+            while x.next != None:
+                  d = x.data
+                  s = x.description
+                  print('   ' + str(d) + ' | ' + str(s))
+                  x = x.next
 
 class Main: 
-   #    Create a fullThrottle() method
+      # Inside main, call the methods square and isEven
+      # type: void
+      def main(self, args):
+            # Create Objects and Vars
+            n = NumKit()
+            # Create Linked List of math nodes
+            head = MathNode(0, 'root')
+            cursor = head
+            for i in range(0,50,1): 
+                  o = None
+                  temp = None
+                  stri = None
+                  flag = None
+                  if i%7 == 5:
+                        temp = n.power(i, i%7)
 
-   #type: void
-   def fullThrottle(self):
-      #      System.      out.println('The car is going as fast as it can! ')
-      System.      out.println('The car is going as fast as it can! ')
+                        cursor.setNext(MathNode(temp, 'power'))
+                        cursor = cursor.next
+                  elif i%7 == 6:
+                        stri = n.isEven(i)
 
-   #    Create a speed() method and add a parameter
+                        cursor.setNext(MathNode(i, stri))
+                        cursor = cursor.next
+                  elif i%7 == 3:
+                        flag = n.isPrime(i)
 
-   #type: void
-   def speed(self, maxSpeed):
-      #      System.      out.println('Max speed is: '+maxSpeed)
-      System.      out.println('Max speed is: '+maxSpeed)
+                        if flag:
+                              cursor.setNext(MathNode(i, 'prime number'))
 
-   #    Inside main, call the methods on the myCar object
+                        else:
+                              cursor.setNext(MathNode(i, 'non-prime number'))
+                        cursor = cursor.next
+            head.printList()
 
-   #type: void
-   def main(self, args):
-      #      Create a myCar object
-
-myCar      #      Call the fullThrottle() method
-
-      myCar.fullThrottle()
-      myCar.fullThrottle()
-      #      Call the speed() method
-
-      myCar.speed('200')
-      myCar.speed('200')
-
+m = Main()
+Main.main(m, None)

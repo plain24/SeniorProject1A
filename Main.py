@@ -2,11 +2,7 @@
 import tkinter as tk
 from PIL import ImageTk, Image
 from tkinter import scrolledtext, filedialog, messagebox
-from Parser import main as ParseMain
-from Scanner import *
-from Parser import getNode
-from translator import *
-import os
+from Translator import *
 
 # constants
 FONT_FAMILY = "Cordana"
@@ -27,6 +23,7 @@ class App(tk.Tk):
         self.configure(bg=BACKGROUND_COLOR)
 
         self.file_input = None
+        self.parse_obj = None
         self.parseFile = None
         self.transFile = None
 
@@ -62,20 +59,20 @@ class App(tk.Tk):
         self.input_text_box = scrolledtext.ScrolledText(
             self,
             wrap=tk.WORD,
-            height=64,
+            height=60,
             width=30,
             borderwidth=0,
-            font=(FONT_FAMILY, 8)
+            font=(FONT_FAMILY, 9)
         )
         self.input_text_box.grid(column=1, row=3, columnspan=4, sticky='nsew')
 
         self.output_text_box = scrolledtext.ScrolledText(
             self,
             wrap=tk.WORD,
-            height=64,
+            height=60,
             width=30,
             borderwidth=0,
-            font=(FONT_FAMILY, 8)
+            font=(FONT_FAMILY, 9)
         )
         self.output_text_box.grid(column=6, row=3, columnspan=4, sticky='nsew')
 
@@ -163,7 +160,7 @@ class App(tk.Tk):
 
     def open_file(self):
         file_1 = filedialog.askopenfilename(
-            initialdir="G:/",
+            initialdir="/",
             title="Select a File",
             filetypes=[("java files", "*.java")]
         )
@@ -172,10 +169,10 @@ class App(tk.Tk):
             self.input_text_box.delete("1.0", tk.END)
             self.input_text_box.insert("1.0", file_2.read())
             file_2.close()
-####################################################################
 
     def translate_file(self):
         self.file_input = None
+        self.parse_obj = None
         self.parseFile = None
         self.transFile = None
 
@@ -188,16 +185,11 @@ class App(tk.Tk):
             file.write(self.input_text_box.get("1.0", tk.END))
             self.file_input = file.name
 
-####################################################################
-        # self.parseFile = getNode(self.file_input)
-        # self.transFile = Translator(self.parseFile)
-        # self.transFile.readTree()
         self.parseFile = getNode(self.file_input)
-        self.transFile = Translator(self.parseFile)
-        self.transFile.readTree()
+        self.transFile = Translator(self.parseFile).readTree()
+
         with open('output_file.txt', 'r') as file:
             file_data = file.read()
-####################################################################
         self.output_text_box.insert("1.0", file_data)
 
     def download_file(self):
@@ -207,7 +199,7 @@ class App(tk.Tk):
         else:
             output_text = self.output_text_box.get("1.0", tk.END)
             output_filename = filedialog.asksaveasfilename(
-                initialdir="G:/",
+                initialdir="/",
                 defaultextension='.txt',
                 title="Save File As",
                 filetypes=[("python file", ".py")])
@@ -291,7 +283,4 @@ class Popup(tk.Toplevel):
         # enable buttons on main gui window
         self.grab_release()
 
-
-if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+App().mainloop()

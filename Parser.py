@@ -2,21 +2,20 @@ from Node import *
 
 from Scanner import *
 
-
 class Item:
     def __init__(self, children, data):
         self.children = []
         self.data = data
 
     # toString used for outputting tree
-    def toString(self, level=0):
+    def toString(self, level = 0):
         # print node data indented based on level in tree
-        ret = "\t" * level + "└-" + repr(self.data) + "\n"
+        ret = "\t"*level+"└-"+repr(self.data)+"\n"
         if self.children is not None:
             for child in self.children:
                 if child is not None:
                     # call toString in children in next level
-                    ret += child.toString((level + 1))
+                    ret += child.toString((level+1))
         return ret
 
 
@@ -28,8 +27,23 @@ loopCount = 0
 
 progLines = []
 
+def init():
+    global currentLine
+    global currentToken
+    global maxLoopDepth
+    global loopCount
+    global progLines
+
+    currentLine = 0
+    currentToken = 0
+
+    maxLoopDepth = 10
+    loopCount = 0
+
+    progLines = []
 
 def main(input):
+    init()
     global progLines
     progLines = input
     tree = compilation_unit()
@@ -44,7 +58,7 @@ def setCurrentLine(v):
 def setCurrentToken(v):
     global currentToken
     currentToken = v
-    # print("TOKEN = ", v)
+    #print("TOKEN = ", v)
 
 
 def nextLine():
@@ -114,10 +128,15 @@ def oneOrMany(fun):
         setCurrentLine(saveLine)
         return None
     while temp is not None:
+        saveToken = currentToken
+        saveLine = currentLine
         item.children.append(temp)
-        if literal(",") is not None:
-            nextTokenAnyLine()
+        # if literal(",") is not None:
+        #     nextTokenAnyLine()
+        literal(",")
         temp = fun()
+    setCurrentToken(saveToken)
+    setCurrentLine(saveLine)
     return item
 
 
@@ -149,11 +168,11 @@ def anyNumberComma(fun):
         return item
     while temp is not None:
         item.children.append(temp)
-        if literal(",") is not None:
-            nextTokenAnyLine()
+        # if literal(",") is not None:
+        #     nextTokenAnyLine()
+        literal(",")
         temp = fun()
     return item
-
 
 def anyNumberPlus(fun):
     item = Item([], "")
@@ -779,27 +798,6 @@ def statement():
         # item.children.append(thrw)
         return item
 
-    expr = onlyOne(expression)
-    if expr is not None:
-        expr = expr.children[0]
-        item.children.append(expr)
-        if literal(";") is None:
-            return None
-        return item
-
-    iden = onlyOne(identifier)
-    if iden is not None:
-        iden = iden.children[0]
-        item.children.append(iden)
-        if literal(":") is None:
-            return None
-        st = onlyOne(statement)
-        if st is None:
-            return None
-        st = st.children[0]
-        item.children.append(st)
-        return item
-
     brk = literal("break")
     if brk is not None:
         item.children.append(brk)
@@ -827,7 +825,39 @@ def statement():
     if literal(";") is not None:
         return item
 
+    saveToken = currentToken
+    saveLine = currentLine
+    idencol = check_iden_colon()
+    if idencol is not None:
+        item = idencol
+        return item
+
+    setCurrentToken(saveToken)
+    setCurrentLine(saveLine)
+    expr = onlyOne(expression)
+    if expr is not None:
+        expr = expr.children[0]
+        item.children.append(expr)
+        if literal(";") is None:
+            return None
+        return item
+
     return None
+
+def check_iden_colon():
+    item = Item([], "statement")
+    iden = onlyOne(identifier)
+    if iden is not None:
+        iden = iden.children[0]
+        item.children.append(iden)
+        if literal(":") is None:
+            return None
+        st = onlyOne(statement)
+        if st is None:
+            return None
+        st = st.children[0]
+        item.children.append(st)
+        return item
 
 
 def if_statement():
@@ -957,11 +987,10 @@ def for_statement():
     if exp.children[0] is not None:
         exp = exp.children[0]
     item.children.append(exp)
-    if literal(";") is None:
-        return None
 
     if literal(")") is None:
         return None
+
 
     st = onlyOne(statement)
     if st is None:
@@ -1067,11 +1096,16 @@ def switch_case():
         item.children.append(exp)
     elif literal("default") is not None:
         item.children.append(Item([], "default"))
+    else:
+        return None
 
-    st = onlyOne(statement)
+    if literal(":") is None:
+        return None
+
+    st = oneOrMany(statement)
     if st is None:
         return None
-    st = st.children[0]
+    st.data = "statements"
     item.children.append(st)
 
     return item
@@ -1091,7 +1125,6 @@ def expression():
         if l is None:
             setCurrentToken(tempToken)
             return None
-        print(peekToken().word, peekToken().id)
         exp = anyNumberPlus(expressionPrint)
         item.children = exp.children
         l = literal(")")
@@ -1099,6 +1132,7 @@ def expression():
             setCurrentToken(tempToken)
             return None
         return item2
+                
 
     # next = nextToken()
     # setCurrentToken(currentToken - 1)
@@ -1434,6 +1468,7 @@ def expression_prime():
             expp.children[0].children.insert(0, item2)
             return expp
 
+
     symbols = {">", "<", ">=", "<=", "==", "!="}
     for symbol in symbols:
         l = literal(symbol)
@@ -1451,6 +1486,7 @@ def expression_prime():
             expp = expp.children[0]
             expp.children[0].children.insert(0, item2)
             return expp
+
 
     symbols = {"&", "&=", "|", "|=", "^", "^=", "&&", "||=", "%", "%="}
     for symbol in symbols:
@@ -1512,6 +1548,7 @@ def expression_prime():
     #         item.children.extend(expp.children)
     #         return item
 
+
     symbols = {">>=", "<<", ">>", ">>>"}
     for symbol in symbols:
         l = literal(symbol)
@@ -1529,6 +1566,22 @@ def expression_prime():
             expp = expp.children[0]
             expp.children[0].children.insert(0, item2)
             return expp
+
+    l = literal("=")
+    if l is not None:
+        item.data = "assignment_expression"
+        item.children.append(l)
+        exptwo = onlyOne(expression)
+        if exptwo is None:
+            return None
+        exptwo = exptwo.children[0]
+        item.children.append(exptwo)
+        expp = onlyOne(expression_prime)
+        if expp is None:
+            return item2
+        expp = expp.children[0]
+        expp.children[0].children.insert(0, item2)
+        return expp
 
     if literal("(") is not None:
         item.data = "method_expression"
@@ -1576,20 +1629,20 @@ def expression_prime():
         expp = expp.children[0]
         expp.children[0].children.insert(0, item2)
         return expp
-    elif literal(",") is not None:
-        item.data = "comma_expression"
-        item.children.append(Item([], ","))
-        exptwo = onlyOne(expression)
-        if exptwo is None:
-            return None
-        exptwo = exptwo.children[0]
-        item.children.append(exptwo)
-        expp = onlyOne(expression_prime)
-        if expp is None:
-            return item2
-        expp = expp.children[0]
-        expp.children[0].children.insert(0, item2)
-        return expp
+    # elif literal(",") is not None:
+    #     item.data = "comma_expression"
+    #     item.children.append(Item([], ","))
+    #     exptwo = onlyOne(expression)
+    #     if exptwo is None:
+    #         return None
+    #     exptwo = exptwo.children[0]
+    #     item.children.append(exptwo)
+    #     expp = onlyOne(expression_prime)
+    #     if expp is None:
+    #         return item2
+    #     expp = expp.children[0]
+    #     expp.children[0].children.insert(0, item2)
+    #     return expp
     elif literal("instanceof") is not None:
         item.data = "instance_expression"
         item.children.append(Item([], "isntanceof"))
@@ -1840,7 +1893,6 @@ def expressionPrint():
         if l is None:
             setCurrentToken(tempToken)
             return None
-        print(peekToken().word, peekToken().id)
         exp = anyNumberPlus(expressionPrint)
         item.children = exp.children
         l = literal(")")
@@ -1967,7 +2019,6 @@ def expressionPrint():
         return item2
     return None
 
-
 def arglist():
     item = Item([], "arglist")
 
@@ -2024,8 +2075,7 @@ def type_specifier():
 def modifier():
     item = Item([], "modifier")
 
-    symbols = {"public", "private", "protected", "static", "final", "native", "synchronized", "abstract", "threadsafe",
-               "transient"}
+    symbols = { "public", "private", "protected", "static", "final", "native", "synchronized", "abstract", "threadsafe", "transient"}
     for symbol in symbols:
         l = literal(symbol)
         if l is not None:
@@ -2047,7 +2097,7 @@ def package_name():
     l = literal(".")
     if l is not None:
         item.children.append(l)
-        pname = onlyOne(package_name())
+        pname = onlyOne(package_name)
         if pname is not None:
             item.children.extend(pname.children)
         else:
@@ -2072,21 +2122,22 @@ def package_name():
 def class_name():
     item = Item([], "class_name")
 
-    iden = onlyOne(identifier)
+    iden = onlyOne(package_name)
     if iden is not None:
         iden = iden.children[0]
         item.children.append(iden)
         return item
 
-    pname = onlyOne(package_name)
-    if pname is not None:
-        pname = pname.children[0]
-        item.children.append(pname)
-        iden = onlyOne(identifier)
-        if iden is not None:
-            iden = iden.children[0]
-            item.children.append(iden)
-            return item
+    # pname = oneOrZero(package_name)
+    # if pname.children[0] is not None:
+    #     pname = pname.children[0]
+    #
+    # item.children.append(pname)
+    # iden = onlyOne(identifier)
+    # if iden is not None:
+    #     iden = iden.children[0]
+    #     item.children.append(iden)
+    #     return item
 
     return None
 
@@ -2164,8 +2215,5 @@ def identifier():
 # create a scanner object then use prepfile on required file
 def getNode(data):
     test = Scanner()
-
     test.prepFile(data)
-    # for n in test.progNodes:
-    #     print(n.toString())
     return main(test.progNodes)
